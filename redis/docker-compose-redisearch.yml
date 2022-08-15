@@ -1,0 +1,13 @@
+version: "3.7"
+services:
+    redis-search:
+        container_name: redisearch
+        restart: always
+        image: redislabs/redisearch:2.4.8
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis:/data/redis/
+
+volumes:
+    redis:

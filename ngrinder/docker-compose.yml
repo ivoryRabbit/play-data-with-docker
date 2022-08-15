@@ -1,0 +1,44 @@
+version: "3.7"
+
+x-agent-common: &agent-common
+  image: ngrinder/agent:latest
+  links:
+    - controller
+  environment:
+    - TZ=Asia/Seoul
+  volumes:
+    - agent:/opt/ngrinder-agent
+#  ulimits:
+#    memlock:
+#      soft: -1
+#      hard: -1
+#    nproc:
+#      soft: 1024000
+#      hard: 1024000
+#    nofile:
+#      soft: 1024000
+#      hard: 1024000
+
+services:
+  controller:
+    container_name: ngrinder-controller
+    image: ngrinder/controller:latest
+    environment:
+      - TZ=Asia/Seoul
+    ports:
+      - "80:80"
+      - "16001:16001"
+      - "12000-12009:12000-12009"
+    volumes:
+      - controller:/opt/ngrinder-controller
+  agent-1:
+    container_name: ngrinder-agent-1
+    <<: *agent-common
+
+  agent-2:
+    container_name: ngrinder-agent-2
+    <<: *agent-common
+
+volumes:
+  controller:
+  agent:

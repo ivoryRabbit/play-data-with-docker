@@ -1,0 +1,37 @@
+version: "3.7"
+
+services:
+  codebuild:
+    image: aws/codebuild/amazonlinux2-aarch64-standard:2.0
+    container_name: codebuild
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - elastic
+
+
+#  grafana:
+#      build:
+#        context: ./grafana
+#      container_name: grafana
+#      ports:
+#        - 9000:3000
+#      volumes:
+#        - grafana-data:/var/lib/grafana
+# Explicitly define the persistent volume for your data storage
+#volumes:
+#  grafana-data:
+#    external: true
