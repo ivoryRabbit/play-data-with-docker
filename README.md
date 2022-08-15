@@ -1,2 +1,4 @@
 # play-data-with-docker [WIP]
-dockers
+
+mac m1
+
