@@ -1,0 +1,66 @@
+version: "3.7"
+
+services:
+  minio:
+    container_name: mlflow-s3
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    shm_size: "1gb"
+    volumes:
+      - minio_data:/data
+    networks:
+      - internal
+      - public
+
+  db:
+    container_name: mlflow-db
+    image: mysql:8.0-oracle
+    restart: always
+    expose:
+      - "3306"
+    environment:
+      MYSQL_DATABASE: mlflow_db
+      MYSQL_USER: mlflow_user
+      MYSQL_PASSWORD: mlflow_password
+      MYSQL_ROOT_PASSWORD: mlflow_password
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - internal
+
+  server:
+    container_name: mlflow-server
+    build: .
+    image: mlflow_server
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: ap-northeast-2
+    command: >
+      mlflow server
+      --backend-store-uri mysql+pymysql://mlflow_user:mlflow_password@db:3306/mlflow_db
+      --default-artifact-root s3://mlflow/
+      --host 0.0.0.0
+    networks:
+      - internal
+      - public
+
+networks:
+  internal:
+  public:
+    driver: bridge
+
+volumes:
+  minio_data:
+  db_data:

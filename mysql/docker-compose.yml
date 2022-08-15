@@ -1,0 +1,30 @@
+version: "3.7"
+
+services:
+  db:
+    container_name: mysql
+    image: arm64v8/mysql:oracle
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    networks:
+      - backends
+    volumes:
+      - mysql:/var/lib/mysql/
+      - ./src/main/resources/sql:/docker-entrypoint-initdb.d/
+    env_file: .env
+    environment:
+      - TZ=Asia/Seoul
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=test_db
+    restart: always
+
+networks:
+  backends:
+
+volumes:
+  mysql:
