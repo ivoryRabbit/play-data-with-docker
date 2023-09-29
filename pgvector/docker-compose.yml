@@ -1,0 +1,12 @@
+version: "3.7"
+services:
+  pgvector:
+    image: ankane/pgvector:latest
+    container_name: pgvector-dev
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/create_tables.sql
