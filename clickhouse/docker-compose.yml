@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  ch_server:
+    image: clickhouse/clickhouse-server
+    ports:
+      - "8123:8123"
+    restart: always
+    volumes:
+      - ./db:/var/lib/clickhouse
+
+  ch_client:
+    image: clickhouse/clickhouse-client
+    entrypoint:
+      - /bin/sleep
+    command:
+      - infinity
