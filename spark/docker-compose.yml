@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  glue_spark_submit:
+    profiles: [ "spark-submit" ]
+    container_name: glue_spark_submit
+    image: amazon/aws-glue-libs:glue_libs_4.0.0_image_01
+    environment:
+      DISABLE_SSL: true
+      WORKSPACE_LOCATION: ./workspace/
+    ports:
+      - '4040:4040'
+      - '18080:18080'
+    volumes:
+      - ~/.aws:/home/glue_user/.aws
+      - ./workspace/:/home/glue_user/workspace/
+    command: spark-submit /home/glue_user/workspace/pyspark/sample.py
+
+  glue_spark_jupyter:
+    profiles: [ "spark-jupyter" ]
+    container_name: glue_spark_jupyter
+    image: amazon/aws-glue-libs:glue_libs_4.0.0_image_01
+    environment:
+      DISABLE_SSL: true
+      JUPYTER_WORKSPACE_LOCATION: ./jupyter_workspace/
+    ports:
+      - '4040:4040'
+      - '18080:18080'
+      - '8998:8998'
+      - '8888:8888'
+    volumes:
+      - ~/.aws:/home/glue_user/.aws
+      - ./workspace/jupyter/:/home/glue_user/workspace/jupyter_workspace/
+    command: /home/glue_user/jupyter/jupyter_start.sh
