@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  fe:
+    image: apache/doris:1.2.0-fe-arm
+    hostname: fe
+    environment:
+    - FE_SERVERS=fe1:localhost:9010
+    - FE_ID=1
+    volumes:
+    - /data/fe/doris-meta/:/opt/apache-doris/fe/doris-meta/
+    - /data/fe/log/:/opt/apache-doris/fe/log/
+    network_mode: host
+  be:
+    image: apache/doris:1.2.0-be-arm
+    hostname: be
+    environment:
+    - FE_SERVERS=fe1:localhost:9010
+    - BE_ADDR=localhost:9050
+    volumes:
+    - /data/be/storage/:/opt/apache-doris/be/storage/
+    - /data/be/script/:/docker-entrypoint-initdb.d/
+    depends_on:
+      - fe
+    network_mode: host
