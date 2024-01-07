@@ -1,0 +1,7 @@
+{
+    "name": "trino1",
+    "proxyTo": "http://trino:8889",
+    "active": true,
+    "externalUrl": "http://localhost:8889",
+    "routingGroup": "dev"
+}

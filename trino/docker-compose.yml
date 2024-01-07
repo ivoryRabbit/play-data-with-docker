@@ -33,7 +33,6 @@ services:
     command: server /data --console-address ":9001"
     restart: always
 
-
   minio-client:
     container_name: minio-client
     hostname: minio-client
@@ -88,3 +87,41 @@ services:
       - ./docker/trino/catalog:/etc/trino/catalog
     depends_on:
       - trino
+
+  trino-gateway:
+    container_name: trino-gateway
+    hostname: trino-gateway
+    build:
+      dockerfile: ./docker/trino-gateway/Dockerfile
+    image: trino-gateway
+    restart: always
+    ports:
+      - "9080:9080"
+      - "9081:9081"
+      - "9082:9082"
+    volumes:
+      - ./docker/trino-gateway/gateway-config.yaml:/etc/trino-gateway/gateway-config.yaml
+      # - ./docker/trino-gateway/register-cluster.json:/etc/trino-gateway/register-cluster.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: >
+      java -Xmx1g --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED -jar gateway-ha.jar server gateway-config.yaml
+    # healthcheck:
+    #   test: [ "CMD", "/usr/lib/trino/bin/health-check"]
+    #   interval: 10s
+    #   retries: 3
+    #   start_period: 10s
+    #   timeout: 5s
+  
+  # trino-gateway-client:
+  #   container_name: trino-gateway-client
+  #   hostname: trino-gateway-client
+  #   image: trino-gateway
+  #   volumes:
+  #     - ./docker/trino-gateway/register-cluster.json:/etc/trino-gateway/register-cluster.json
+  #   depends_on:
+  #     - trino
+  #     - trino-gateway
+  #   command: >
+  #     curl -H "Content-Type: application/json" -X POST trino-gateway:9080/gateway/backend/modify/add -d @register-cluster.json
