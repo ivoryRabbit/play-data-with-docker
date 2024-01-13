@@ -1,7 +1,7 @@
 requestRouter:
   #SQL clients connect to the request port
   port: 9080
-  name: testTrinoRouter
+  name: devTrinoRouter
   historySize: 1000
 
 server:

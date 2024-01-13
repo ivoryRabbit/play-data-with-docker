@@ -64,29 +64,40 @@ services:
       postgres:
         condition: service_healthy
 
-  trino:
-    container_name: trino
+  trino1:
+    container_name: trino1
     hostname: trino
     image: trinodb/trino:435
-    restart: always
     ports:
-      - "8889:8889"
+      - "8081:8080"
     volumes:
       - ./docker/trino/etc-coordinator:/etc/trino
       - ./docker/trino/catalog:/etc/trino/catalog
     depends_on:
       - hive-metastore
 
-  trino-worker:
-    container_name: trino-worker
-    hostname: trino-worker
+  # trino-worker:
+  #   container_name: trino-worker
+  #   hostname: trino-worker
+  #   image: trinodb/trino:435
+  #   restart: always
+  #   volumes:
+  #     - ./docker/trino/etc-worker:/etc/trino
+  #     - ./docker/trino/catalog:/etc/trino/catalog
+  #   depends_on:
+  #     - trino
+
+  trino2:
+    container_name: trino2
+    hostname: trino
     image: trinodb/trino:435
-    restart: always
+    ports:
+      - "8082:8080"
     volumes:
-      - ./docker/trino/etc-worker:/etc/trino
+      - ./docker/trino/etc-coordinator:/etc/trino
       - ./docker/trino/catalog:/etc/trino/catalog
     depends_on:
-      - trino
+      - hive-metastore
 
   trino-gateway:
     container_name: trino-gateway
