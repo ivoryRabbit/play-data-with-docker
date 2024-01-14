@@ -40,7 +40,7 @@ services:
     entrypoint: >
       /bin/bash -c "
       mc config --quiet host add storage http://minio:9000 minio minio123 || true;
-      mc mb --quiet storage/metastore || true;
+      mc mb --quiet --ignore-existing storage/metastore || true;
       "
     environment:
       - AWS_ACCESS_KEY_ID=minio
@@ -64,8 +64,8 @@ services:
       postgres:
         condition: service_healthy
 
-  trino1:
-    container_name: trino1
+  trino-1:
+    container_name: trino-1
     hostname: trino
     image: trinodb/trino:435
     ports:
@@ -76,28 +76,65 @@ services:
     depends_on:
       - hive-metastore
 
-  # trino-worker:
-  #   container_name: trino-worker
-  #   hostname: trino-worker
-  #   image: trinodb/trino:435
-  #   restart: always
-  #   volumes:
-  #     - ./docker/trino/etc-worker:/etc/trino
-  #     - ./docker/trino/catalog:/etc/trino/catalog
-  #   depends_on:
-  #     - trino
-
-  trino2:
-    container_name: trino2
-    hostname: trino
+  trino-1-worker-1:
+    container_name: trino-1-worker-1
+    hostname: trino-worker-1
     image: trinodb/trino:435
     ports:
       - "8082:8080"
     volumes:
-      - ./docker/trino/etc-coordinator:/etc/trino
+      - ./docker/trino/etc-worker:/etc/trino
+      - ./docker/trino/catalog:/etc/trino/catalog
+    depends_on:
+      - trino-1
+  
+  trino-1-worker-2:
+    container_name: trino-1-worker-2
+    hostname: trino-worker-2
+    image: trinodb/trino:435
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./docker/trino/etc-worker:/etc/trino
+      - ./docker/trino/catalog:/etc/trino/catalog
+    depends_on:
+      - trino-1
+
+  trino-2:
+    container_name: trino-2
+    hostname: trino
+    image: trinodb/trino:435
+    ports:
+      - "8091:8080"
+    volumes:
+      - ./docker/trino/etc-coordinator-2:/etc/trino
       - ./docker/trino/catalog:/etc/trino/catalog
     depends_on:
       - hive-metastore
+
+  trino-2-worker-1:
+    container_name: trino-2-worker-1
+    hostname: trino-worker-1
+    image: trinodb/trino:435
+    ports:
+      - "8092:8080"
+    volumes:
+      - ./docker/trino/etc-worker-2:/etc/trino
+      - ./docker/trino/catalog:/etc/trino/catalog
+    depends_on:
+      - trino-2
+
+  trino-2-worker-2:
+    container_name: trino-2-worker-2
+    hostname: trino-worker-2
+    image: trinodb/trino:435
+    ports:
+      - "8093:8080"
+    volumes:
+      - ./docker/trino/etc-worker-2:/etc/trino
+      - ./docker/trino/catalog:/etc/trino/catalog
+    depends_on:
+      - trino-2
 
   trino-gateway:
     container_name: trino-gateway
@@ -112,18 +149,11 @@ services:
       - "9082:9082"
     volumes:
       - ./docker/trino-gateway/gateway-config.yaml:/etc/trino-gateway/gateway-config.yaml
-      # - ./docker/trino-gateway/register-cluster.json:/etc/trino-gateway/register-cluster.json
     depends_on:
       postgres:
         condition: service_healthy
     entrypoint: >
       java -Xmx1g --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED -jar gateway-ha.jar server gateway-config.yaml
-    # healthcheck:
-    #   test: [ "CMD", "/usr/lib/trino/bin/health-check"]
-    #   interval: 10s
-    #   retries: 3
-    #   start_period: 10s
-    #   timeout: 5s
   
   # trino-gateway-client:
   #   container_name: trino-gateway-client

@@ -1,0 +1,7 @@
+{
+    "name": "trino-1",
+    "proxyTo": "http://trino-1:8080",
+    "active": true,
+    "externalUrl": "http://localhost:8081",
+    "routingGroup": "adhoc"
+}
