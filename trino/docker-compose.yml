@@ -63,6 +63,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   trino-1:
     container_name: trino-1
@@ -140,6 +142,9 @@ services:
     container_name: trino-gateway
     hostname: trino-gateway
     build:
+      args:
+        VERSION: 4
+        JAR_FILE: gateway-ha.jar
       dockerfile: ./docker/trino-gateway/Dockerfile
     image: trino-gateway
     restart: always
@@ -149,11 +154,17 @@ services:
       - "9082:9082"
     volumes:
       - ./docker/trino-gateway/gateway-config.yaml:/etc/trino-gateway/gateway-config.yaml
+      - ./docker/trino-gateway/routing-rule.yaml:/etc/trino-gateway/routing-rule.yaml
     depends_on:
       postgres:
         condition: service_healthy
-    entrypoint: >
-      java -Xmx1g --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED -jar gateway-ha.jar server gateway-config.yaml
+    entrypoint: [
+      "java", 
+      "--add-opens=java.base/java.lang=ALL-UNNAMED", 
+      "--add-opens=java.base/java.net=ALL-UNNAMED",
+      "-jar", "gateway-ha.jar", 
+      "server", "gateway-config.yaml"
+    ]
   
   # trino-gateway-client:
   #   container_name: trino-gateway-client

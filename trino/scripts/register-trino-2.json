@@ -3,5 +3,5 @@
     "proxyTo": "http://trino-2:8080",
     "active": true,
     "externalUrl": "http://localhost:8091",
-    "routingGroup": "adhoc"
+    "routingGroup": "etl"
 }

@@ -34,3 +34,7 @@ modules:
 managedApps:
   - io.trino.gateway.ha.GatewayManagedApp
   - io.trino.gateway.ha.clustermonitor.ActiveClusterMonitor
+
+routingRules:
+  rulesEngineEnabled: true
+  rulesConfigPath: "/etc/trino-gateway/routing-rule.yaml"
