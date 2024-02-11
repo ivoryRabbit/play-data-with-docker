@@ -1,0 +1,16 @@
+trino:
+  target: dev
+  outputs:
+    dev:
+      type: trino
+      method: none
+      user: admin
+      password:
+      host: localhost
+      port: 8080
+      catalog: hive
+      schema: dev
+      threads: 1
+      http_scheme: http
+      session_properties:
+        query_max_run_time: 1h
