@@ -3,14 +3,11 @@ trino:
   outputs:
     dev:
       type: trino
-      method: none
+      host: localhost
+      port: 543
       user: admin
       password:
-      host: localhost
-      port: 8080
       catalog: hive
       schema: dev
       threads: 1
-      http_scheme: http
-      session_properties:
-        query_max_run_time: 1h
+      

@@ -1,4 +1,3 @@
-import os
 import logging
 import subprocess
 import zipfile
@@ -31,17 +30,6 @@ def download_data(dir: str):
 
         file_zip = zipfile.ZipFile(f"{dir}/{zip_filename}")
         file_zip.extractall(local_path)
-
-        ratings = pd.read_csv(
-            f"{dir}/{FILENAME}/ratings.dat",
-            delimiter="::",
-            names=["user_id", "movie_id", "rating", "timestamp"],
-            engine="python",
-            encoding="ISO-8859-1",
-        )
-
-        ratings.to_csv(f"{dir}/ratings.csv", index=False)
-        del ratings
 
         users = pd.read_csv(
             f"{dir}/{FILENAME}/users.dat",

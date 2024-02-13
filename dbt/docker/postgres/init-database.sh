@@ -2,7 +2,11 @@
 set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    CREATE DATABASE metastore;
+    CREATE DATABASE hive;
     CREATE USER hive WITH ENCRYPTED PASSWORD 'hive';
-    GRANT ALL PRIVILEGES ON DATABASE metastore TO hive;
+    GRANT ALL PRIVILEGES ON DATABASE hive TO hive;
+
+    CREATE DATABASE airflow;
+    CREATE USER airflow WITH ENCRYPTED PASSWORD 'airflow';
+    GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow;
 EOSQL

@@ -1,0 +1,10 @@
+**/volume/*.
+**/volume
+
+**/logs/*.
+**/logs
+
+target/
+dbt_packages/
+logs/
+*.csv
