@@ -3,11 +3,11 @@ trino:
   outputs:
     dev:
       type: trino
-      host: localhost
+      host: trino
       port: 543
       user: admin
       password:
       catalog: hive
-      schema: dev
+      schema: default
       threads: 1
       
