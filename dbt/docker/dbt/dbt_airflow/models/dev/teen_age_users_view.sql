@@ -3,5 +3,5 @@
 
 {{ config(materialized='view') }}
 SELECT *
-FROM {{ ref('my_first_dbt_model') }}
-WHERE id = 1
+FROM {{ ref("users") }}
+WHERE age BETWEEN 10 AND 19

@@ -19,13 +19,13 @@ x-airflow-common: &airflow-common
     AIRFLOW_UID: '50000'
     _AIRFLOW_WWW_USER_USERNAME: airflow
     _AIRFLOW_WWW_USER_PASSWORD: airflow
-    _PIP_ADDITIONAL_REQUIREMENTS: dbt-core==1.7.7 dbt-trino==1.7.1
+    _PIP_ADDITIONAL_REQUIREMENTS: dbt-core==1.7.7 dbt-trino==1.7.1 pandas==1.5.3
   volumes:
     - ./docker/airflow/dags:/opt/airflow/dags
     - ./docker/airflow/config:/opt/airflow/config
     - ./docker/airflow/plugins:/opt/airflow/plugins
     - ./docker/airflow/logs:/opt/airflow/logs
-    - ./docker/dbt/dbt_test:/opt/airflow/dbts
+    - ./docker/dbt/dbt_airflow:/opt/airflow/dbts
   user: "50000:0"
   depends_on: &airflow-common-depends-on
     redis:

@@ -2,7 +2,7 @@
 version: 2
 
 models:
-  - name: my_first_dbt_model
+  - name: recent_movies
     description: "A starter dbt model"
     columns:
       - name: id
@@ -10,8 +10,11 @@ models:
         tests:
           - unique
           - not_null
+      - name: title
+      - name: genres
+      - name: year
 
-  - name: my_second_dbt_model
+  - name: teen_age_users_view
     description: "A starter dbt model"
     columns:
       - name: id
@@ -19,3 +22,7 @@ models:
         tests:
           - unique
           - not_null
+      - name: gender
+      - name: age
+      - name: occupation
+      - name: zip_code

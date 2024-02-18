@@ -7,12 +7,13 @@
     Try changing "table" to "view" below
 */
 
-{{ config(materialized='table') }}
+{{ config(materialized="table") }}
 
 WITH source_data AS (
-    SELECT 1 AS id
-    UNION ALL
-    SELECT NULL AS id
+    SELECT *
+    FROM {{ ref("movies") }}
+    ORDER BY year DESC, id DESC
+    LIMIT 100
 )
 
 SELECT *

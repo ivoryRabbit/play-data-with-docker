@@ -66,7 +66,3 @@ def download_data(dir: str):
         subprocess.check_call(f"rm -rf {dir}", shell=True)
 
         logger.info("Failed to download dataset...: %s", ex)
-
-
-if __name__ == "__main__":
-    download_data(dir="dbt_test/seeds")
