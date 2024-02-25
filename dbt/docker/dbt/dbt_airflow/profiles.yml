@@ -10,3 +10,12 @@ trino:
       catalog: hive
       schema: default
       threads: 1
+    local:
+      type: trino
+      host: localhost
+      port: 543
+      user: admin
+      password:
+      catalog: hive
+      schema: default
+      threads: 1
