@@ -1,11 +1,7 @@
 version: "3.9"
 
 x-kafka-common: &kafka-common
-  image: bitnami/kafka:2.8.1
-  expose:
-    - 9092
-  networks:
-    - kafkanet
+  image: bitnami/kafka:3.3.2
   environment: &environment-common
     ALLOW_PLAINTEXT_LISTENER: yes
     KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -13,19 +9,22 @@ x-kafka-common: &kafka-common
     KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
   depends_on:
     - zookeeper
+  healthcheck:
+    test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --topic <TOPIC_NAME> --describe"]
+    interval: 5s
+    timeout: 10s
+    retries: 3
 
 services:
   zookeeper:
-    image: bitnami/zookeeper:3.5
+    image: bitnami/zookeeper:3.7.2
     container_name: zookeeper
     ports:
-      - "2181"
-    networks:
-      - kafkanet
+      - "2181:2181"
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
     volumes:
-      - zookeeper_data:/bitnami/zookeeper
+      - ./docker/volume/kafka/zookeeper:/bitnami/zookeeper
 
   kafka-node-0:
     <<: *kafka-common
@@ -38,7 +37,7 @@ services:
       KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:29092
       KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka-node-0:9092,EXTERNAL://localhost:29092
     volumes:
-      - kafka_0_data:/bitnami/kafka
+      - ./docker/volume/kafka/node_0:/bitnami/kafka
   
   kafka-node-1:
     <<: *kafka-common
@@ -51,7 +50,7 @@ services:
       KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:29093
       KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka-node-1:9092,EXTERNAL://localhost:29093
     volumes:
-      - kafka_1_data:/bitnami/kafka
+      - ./docker/volume/kafka/node_1:/bitnami/kafka
   
   kafka-node-2:
     <<: *kafka-common
@@ -64,22 +63,21 @@ services:
       KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:29094
       KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka-node-2:9092,EXTERNAL://localhost:29094
     volumes:
-      - kafka_2_data:/bitnami/kafka
+      - ./docker/volume/kafka/node_2:/bitnami/kafka
 
-networks:
-  kafkanet:
-    name: kafka-network
-
-volumes:
-  zookeeper_data:
-    driver: local
-    name: zookeeper_data
-  kafka_0_data:
-    driver: local
-    name: kafka_0_data
-  kafka_1_data:
-    driver: local
-    name: kafka_1_data
-  kafka_2_data:
-    driver: local
-    name: kafka_2_data
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      - DYNAMIC_CONFIG_ENABLED=true
+    volumes:
+      - ./docker/kafka-ui/config.yml:/etc/kafkaui/dynamic_config.yaml
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider localhost:8080 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
