@@ -1,78 +1,159 @@
 version: "3.9"
 
+x-kafka-common: &kafka-common
+  image: bitnami/kafka:3.3.2
+  environment: &environment-common
+    ALLOW_PLAINTEXT_LISTENER: yes
+    KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+    KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+    KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+  depends_on:
+    - zookeeper
+  healthcheck:
+    test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --topic <TOPIC_NAME> --describe"]
+    interval: 5s
+    timeout: 10s
+    retries: 3
+
 services:
-  # postgres:
-  #   container_name: postgres
-  #   hostname: postgres
-  #   image: postgres:14-alpine
-  #   ports:
-  #     - "5432:5432"
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #   volumes:
-  #     - ./docker/volume/postgres:/var/lib/postgresql/data
-  #     - ./docker/postgres/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
-  #   healthcheck:
-  #     test: [ "CMD", "pg_isready", "-U", "postgres" ]
-  #     interval: 10s
-  #     retries: 3
-  #     start_period: 5s
+  zookeeper:
+    image: bitnami/zookeeper:3.7.2
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    volumes:
+      - ./docker/volume/kafka/zookeeper:/bitnami/zookeeper
 
-  # minio:
-  #   container_name: minio
-  #   hostname: minio
-  #   image: minio/minio
-  #   ports:
-  #     - "9000:9000"
-  #     - "9001:9001"
-  #   environment:
-  #     MINIO_ROOT_USER: minio
-  #     MINIO_ROOT_PASSWORD: minio123
-  #     MINIO_DOMAIN: minio
-  #   command: server /data --console-address ":9001"
-  #   healthcheck:
-  #     test: "mc ready local"
-  #     interval: 10s
-  #     retries: 3
-  #     start_period: 5s
+  kafka-node-0:
+    <<: *kafka-common
+    container_name: kafka-node-0
+    ports:
+      - "29092:29092"
+    environment:
+      <<: *environment-common
+      KAFKA_CFG_BROKER_ID: 0
+      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka-node-0:9092,EXTERNAL://localhost:29092
+    volumes:
+      - ./docker/volume/kafka/node_0:/bitnami/kafka
+  
+  kafka-node-1:
+    <<: *kafka-common
+    container_name: kafka-node-1
+    ports:
+      - "29093:29093"
+    environment:
+      <<: *environment-common
+      KAFKA_CFG_BROKER_ID: 1
+      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:29093
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka-node-1:9092,EXTERNAL://localhost:29093
+    volumes:
+      - ./docker/volume/kafka/node_1:/bitnami/kafka
+  
+  kafka-node-2:
+    <<: *kafka-common
+    container_name: kafka-node-2
+    ports:
+      - "29094:29094"
+    environment:
+      <<: *environment-common
+      KAFKA_CFG_BROKER_ID: 2
+      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:29094
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka-node-2:9092,EXTERNAL://localhost:29094
+    volumes:
+      - ./docker/volume/kafka/node_2:/bitnami/kafka
 
-  # minio-client:
-  #   container_name: minio-client
-  #   hostname: minio-client
-  #   image: minio/mc
-  #   entrypoint: >
-  #     /bin/bash -c "
-  #     mc config --quiet host add storage http://minio:9000 minio minio123 || true;
-  #     mc mb --quiet --ignore-existing storage/hive || true;
-  #     "
-  #   environment:
-  #     AWS_ACCESS_KEY_ID: minio
-  #     AWS_SECRET_ACCESS_KEY: minio123
-  #     S3_ENDPOINT: http://minio:9000
-  #     S3_PATH_STYLE_ACCESS: true
-  #   depends_on:
-  #     minio:
-  #       condition: service_healthy
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      - DYNAMIC_CONFIG_ENABLED=true
+    volumes:
+      - ./docker/kafka-ui/config.yml:/etc/kafkaui/dynamic_config.yaml
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider localhost:8080 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
-  # hive-metastore:
-  #   container_name: hive-metastore
-  #   hostname: hive-metastore
-  #   image: starburstdata/hive:3.1.3-e.6
-  #   ports:
-  #     - "9083:9083"
-  #   env_file:
-  #     - ./docker/hive-metastore/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     minio:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: "netstat -lpn | grep 9083"
-  #     interval: 10s
-  #     retries: 3
-  #     start_period: 5s
+  postgres:
+    container_name: postgres
+    hostname: postgres
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./docker/volume/postgres:/var/lib/postgresql/data
+      - ./docker/postgres/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 10s
+      retries: 3
+      start_period: 5s
+
+  minio:
+    container_name: minio
+    hostname: minio
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+      MINIO_DOMAIN: minio
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: "mc ready local"
+      interval: 10s
+      retries: 3
+      start_period: 5s
+
+  minio-client:
+    container_name: minio-client
+    hostname: minio-client
+    image: minio/mc
+    entrypoint: >
+      /bin/bash -c "
+      mc config --quiet host add storage http://minio:9000 minio minio123 || true;
+      mc mb --quiet --ignore-existing storage/hive || true;
+      "
+    environment:
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: true
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  hive-metastore:
+    container_name: hive-metastore
+    hostname: hive-metastore
+    image: starburstdata/hive:3.1.3-e.6
+    ports:
+      - "9083:9083"
+    env_file:
+      - ./docker/hive-metastore/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: "netstat -lpn | grep 9083"
+      interval: 10s
+      retries: 3
+      start_period: 5s
 
   flink-jobmanager:
     container_name: flink-jobmanager
@@ -95,207 +176,3 @@ services:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
     volumes:
       - ./docker/volume/flink/taskmanager:/data/flink
-
-
-  #   hostname: postgres
-  #   image: postgres:14-alpine
-  #   ports:
-  #     - "5432:5432"
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #   volumes:
-  #     - ./docker/volume/postgres:/var/lib/postgresql/data
-  #     - ./docker/postgres/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
-  #   healthcheck:
-  #     test: [ "CMD", "pg_isready", "-U", "postgres" ]
-  #     interval: 10s
-  #     retries: 3
-  #     start_period: 5s
-
-
-  # flink-jobmanager:
-  #   build:
-  #     dockerfile: ./docker/flink/Dockerfile-flink1.17
-  #   image: 1ambda/lakehouse:flink-1.17
-  #   container_name: flink-jobmanager
-  #   hostname: flink-jobmanager
-  #   entrypoint: >
-  #     /bin/bash -c "
-  #     export HADOOP_CLASSPATH=`/opt/hadoop/bin/hadoop classpath`;
-  #     /docker-entrypoint.sh jobmanager;
-  #     "
-  #   working_dir: /opt/flink
-  #   ports:
-  #     - "8082:8081"
-  #     - "6123:6123"
-  #   environment:
-  #     - AWS_ACCESS_KEY_ID=minio
-  #     - AWS_SECRET_ACCESS_KEY=minio123
-  #     - AWS_REGION=ap-northeast-2
-  #     - AWS_DEFAULT_REGION=ap-northeast-2
-  #     - S3_ENDPOINT=http://minio:9000
-  #     - S3_PATH_STYLE_ACCESS=true
-  #     - >
-  #       FLINK_PROPERTIES=
-  #       fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
-  #       fs.s3a.access.key: minio
-  #       fs.s3a.secret.key: minio123
-  #       fs.s3a.endpoint: http://minio:9000
-  #       fs.s3a.path.style.access: true
-  #       jobmanager.rpc.address: flink-jobmanager
-  #       state.backend: rocksdb
-  #       state.backend.incremental: true
-  #       state.checkpoints.dir: s3a://datalake/flink/cluster-common/checkpoints/
-  #       state.savepoints.dir: s3a://datalake/flink/cluster-common/savepoints/
-  #   volumes:
-  #     - ./docker/flink/hadoop-core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
-  #     - ./docker/flink/hadoop-hive-site.xml:/opt/flink/conf/hive-site.xml
-  #     - ./docker/flink/flink-sql-hudi.sh:/opt/flink-client/flink-sql-hudi
-  #     - ./docker/flink/flink-init-hudi.sql:/opt/flink-client/flink-init-hudi.sql
-  #     - ./docker/flink/flink-sql-iceberg.sh:/opt/flink-client/flink-sql-iceberg
-  #     - ./docker/flink/flink-init-iceberg.sql:/opt/flink-client/flink-init-iceberg.sql
-
-  # flink-taskmanager:
-  #   build:
-  #     dockerfile: ./docker/flink/Dockerfile-flink1.17
-  #   image: 1ambda/lakehouse:flink-1.17
-  #   container_name: flink-taskmanager
-  #   hostname: flink-taskmanager
-  #   entrypoint: >
-  #     /bin/bash -c "
-  #     export HADOOP_CLASSPATH=`/opt/hadoop//bin/hadoop classpath`;
-  #     /docker-entrypoint.sh taskmanager;
-  #     "
-  #   working_dir: /opt/flink
-  #   environment:
-  #     - AWS_ACCESS_KEY_ID=minio
-  #     - AWS_SECRET_ACCESS_KEY=minio123
-  #     - AWS_REGION=ap-northeast-2
-  #     - AWS_DEFAULT_REGION=ap-northeast-2
-  #     - S3_ENDPOINT=http://minio:9000
-  #     - S3_PATH_STYLE_ACCESS=true
-  #     - >
-  #       FLINK_PROPERTIES=
-  #       fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
-  #       fs.s3a.access.key: minio
-  #       fs.s3a.secret.key: minio123
-  #       fs.s3a.endpoint: http://minio:9000
-  #       fs.s3a.path.style.access: true
-  #       jobmanager.rpc.address: flink-jobmanager
-  #       taskmanager.numberOfTaskSlots: 8
-  #       parallelism.default: 1
-  #       state.backend: rocksdb
-  #       state.backend.incremental: true
-  #       state.checkpoints.dir: s3a://datalake/flink/cluster-common/checkpoints/
-  #       state.savepoints.dir: s3a://datalake/flink/cluster-common/savepoints/
-  #   volumes:
-  #       - ./docker/flink/hadoop-core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
-  #       - ./docker/flink/hadoop-hive-site.xml:/opt/flink/conf/hive-site.xml
-  #   depends_on:
-  #     - flink-jobmanager
-
-
-#   jobmanager:
-#     build:
-#       dockerfile: ./docker/pyflink/Dockerfile
-#     image: building-pyflink-apps:1.17.1
-#     command: jobmanager
-#     container_name: jobmanager
-#     ports:
-#       - "8081:8081"
-#     environment:
-#       - AWS_ACCESS_KEY_ID=minio
-#       - AWS_SECRET_ACCESS_KEY=minio123
-#       - AWS_REGION=us-east-1
-#       - AWS_DEFAULT_REGION=us-east-1
-#       - S3_ENDPOINT=http://minio:9000
-#       - S3_PATH_STYLE_ACCESS=true
-#       - >
-#         FLINK_PROPERTIES=
-#         fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
-#         fs.s3a.access.key: minio
-#         fs.s3a.secret.key: minio123
-#         fs.s3a.endpoint: http://minio:9000
-#         fs.s3a.path.style.access: true
-#         jobmanager.rpc.address: flink-jobmanager
-#         state.backend: rocksdb
-#         state.backend.incremental: true
-#         state.checkpoints.dir: s3a://datalake/flink/cluster-common/checkpoints/
-#         state.savepoints.dir: s3a://datalake/flink/cluster-common/savepoints/
-#     volumes:
-#       - ./src:/tmp/src
-  
-#   taskmanager-0:
-#     build:
-#       dockerfile: ./docker/pyflink/Dockerfile
-#     image: building-pyflink-apps:1.17.1
-#     command: taskmanager
-#     container_name: taskmanager-0
-#     volumes:
-#       - flink_data_0:/tmp/
-#       - ./src:/tmp/src
-#     environment:
-#       - AWS_ACCESS_KEY_ID=minio
-#       - AWS_SECRET_ACCESS_KEY=minio123
-#       - AWS_REGION=us-east-1
-#       - AWS_DEFAULT_REGION=us-east-1
-#       - S3_ENDPOINT=http://minio:9000
-#       - S3_PATH_STYLE_ACCESS=true
-#       - >
-#         FLINK_PROPERTIES=
-#         fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
-#         fs.s3a.access.key: minio
-#         fs.s3a.secret.key: minio123
-#         fs.s3a.endpoint: http://minio:9000
-#         fs.s3a.path.style.access: true
-#         jobmanager.rpc.address: flink-jobmanager
-#         taskmanager.numberOfTaskSlots: 8
-#         parallelism.default: 1
-#         state.backend: rocksdb
-#         state.backend.incremental: true
-#         state.checkpoints.dir: s3a://datalake/flink/cluster-common/checkpoints/
-#         state.savepoints.dir: s3a://datalake/flink/cluster-common/savepoints/
-#     depends_on:
-#       - jobmanager
-  
-#   taskmanager-1:
-#     build:
-#       dockerfile: ./docker/pyflink/Dockerfile
-#     image: building-pyflink-apps:1.17.1
-#     command: taskmanager
-#     container_name: taskmanager-1
-#     volumes:
-#       - flink_data_1:/tmp/
-#       - ./src:/tmp/src
-#     environment:
-#       - AWS_ACCESS_KEY_ID=minio
-#       - AWS_SECRET_ACCESS_KEY=minio123
-#       - AWS_REGION=us-east-1
-#       - AWS_DEFAULT_REGION=us-east-1
-#       - S3_ENDPOINT=http://minio:9000
-#       - S3_PATH_STYLE_ACCESS=true
-#       - >
-#         FLINK_PROPERTIES=
-#         fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
-#         fs.s3a.access.key: minio
-#         fs.s3a.secret.key: minio123
-#         fs.s3a.endpoint: http://minio:9000
-#         fs.s3a.path.style.access: true
-#         jobmanager.rpc.address: flink-jobmanager
-#         taskmanager.numberOfTaskSlots: 8
-#         parallelism.default: 1
-#         state.backend: rocksdb
-#         state.backend.incremental: true
-#         state.checkpoints.dir: s3a://datalake/flink/cluster-common/checkpoints/
-#         state.savepoints.dir: s3a://datalake/flink/cluster-common/savepoints/
-#     depends_on:
-#       - jobmanager
-
-# volumes:
-#   flink_data_0:
-#     driver: local
-#     name: flink_data_0
-#   flink_data_1:
-#     driver: local
-#     name: flink_data_1
