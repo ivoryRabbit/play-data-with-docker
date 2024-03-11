@@ -1,0 +1,6 @@
+kafka:
+  clusters:
+    -
+      name: local
+      bootstrapServers: kafka-node-0:9092,kafka-node-1:9092,kafka-node-2:9092
+      
