@@ -2,3 +2,4 @@
 
 **/volume/*.
 **/volume
+.DS_Store
