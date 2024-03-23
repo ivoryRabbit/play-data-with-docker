@@ -3,3 +3,9 @@
 **/volume/*.
 **/volume
 .DS_Store
+
+.metals
+.metals/*
+
+.vscode
+.vscode/*
