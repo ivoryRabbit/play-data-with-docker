@@ -5,25 +5,30 @@ ThisBuild / resolvers ++= Seq(
 
 name := "flink-dev"
 
-version := "0.1-SNAPSHOT"
-
-organization := "ivoryRabbit"
-
+ThisBuild / version := "0.1-SNAPSHOT"
 ThisBuild / scalaVersion := "2.12.19"
+ThisBuild / organization := "ivoryRabbit"
+
+ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
+ThisBuild / scalacOptions ++= Seq("-unchecked", "-feature")
 
 val flinkVersion = "1.18.1"
 
-lazy val root = (project in file(".")).
-  settings(
+lazy val root = (project in file("."))
+  .settings(
     libraryDependencies ++= Seq(
-      "org.apache.flink" %% "flink-scala" % flinkVersion % "provided",
+      "org.apache.flink" %% "flink-scala" % flinkVersion,
       "org.apache.flink" %% "flink-streaming-scala" % flinkVersion % "provided",
+//      "org.apache.flink" %% "flink-table-api-scala" % flinkVersion,
+      "org.apache.flink" %% "flink-table-api-scala-bridge" % flinkVersion % "provided",
+      "org.apache.flink" % "flink-table" % flinkVersion % "provided" pomOnly(),
       "org.apache.flink" % "flink-connector-kafka" % "1.17.2" % "provided",
-      "ch.qos.logback" % "logback-classic" % "1.3.14" % "provided",
+      "ch.qos.logback" % "logback-classic" % "1.4.14" % "provided",
     )
   )
 
 assembly / mainClass := Some("org.example.Job")
+assembly / logLevel := Level.Warn
 
 // make run command include the provided dependencies
 Compile / run  := Defaults.runTask(Compile / fullClasspath,

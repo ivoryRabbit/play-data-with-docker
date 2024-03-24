@@ -44,7 +44,7 @@ import org.apache.flink.streaming.api.scala._
  */
 object SocketTextStreamWordCount {
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     if (args.length != 2) {
       System.err.println("USAGE:\nSocketTextStreamWordCount <hostname> <port>")
       return
@@ -62,7 +62,7 @@ object SocketTextStreamWordCount {
       .keyBy(0)
       .sum(1)
 
-    counts print
+    counts.print()
 
     env.execute("Scala SocketTextStreamWordCount Example")
   }

@@ -111,7 +111,7 @@ services:
   flink-jobmanager:
     container_name: flink-jobmanager
     hostname: flink-jobmanager
-    image: flink:latest
+    image: flink:1.18.1-scala_2.12-java17
     ports:
       - "8081:8081"
     command: jobmanager
@@ -123,7 +123,7 @@ services:
   flink-taskmanager:
     container_name: flink-taskmanager
     hostname: flink-taskmanager
-    image: flink:latest
+    image: flink:1.18.1-scala_2.12-java17
     command: taskmanager
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
