@@ -23,7 +23,7 @@ lazy val root = (project in file("."))
       "org.apache.flink" %% "flink-table-api-scala-bridge" % flinkVersion % "provided",
       "org.apache.flink" % "flink-table" % flinkVersion % "provided" pomOnly(),
       "org.apache.flink" % "flink-connector-kafka" % "1.17.2" % "provided",
-      "ch.qos.logback" % "logback-classic" % "1.4.14" % "provided",
+      "org.apache.flink" % "flink-shaded-guava" % "30.1.1-jre-16.1"
     )
   )
 
