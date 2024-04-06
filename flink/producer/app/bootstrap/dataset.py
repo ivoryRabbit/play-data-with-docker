@@ -32,7 +32,7 @@ def load_data(path: str):
         file_zip.extractall(local_path)
 
         ratings = pd.read_csv(
-            f"{path}/{FILENAME}/users.dat",
+            f"{path}/{FILENAME}/ratings.dat",
             delimiter="::",
             names=["user_id", "movie_id", "rating", "timestamp"],
             engine="python",
