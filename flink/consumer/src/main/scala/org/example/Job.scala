@@ -19,7 +19,6 @@ object Job {
       .setGroupId("flink-consumer-group")
       .setStartingOffsets(OffsetsInitializer.latest())
       .setValueOnlyDeserializer(
-        //        new JsonRowDeserializationSchema(false) //[Rating]()
         new SimpleStringSchema()
       )
       .setProperty("enable.auto.commit", "true")

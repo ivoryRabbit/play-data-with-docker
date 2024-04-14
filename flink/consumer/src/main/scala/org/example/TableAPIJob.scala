@@ -50,8 +50,5 @@ object TableAPIJob {
           | SELECT user_id, movie_id, rating, FROM_UNIXTIME(`timestamp`) AS created_at
           | FROM ratings
           |""".stripMargin)
-//      .sqlQuery("SELECT user_id, movie_id, rating, TO_TIMESTAMP_LTZ(`timestamp`, 0) AS created_at FROM ratings")
-//      .executeInsert("ratings_clean")
-//      .wait()
   }
 }

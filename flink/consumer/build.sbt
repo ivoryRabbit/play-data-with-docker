@@ -27,7 +27,7 @@ lazy val root = (project in file("."))
     )
   )
 
-assembly / mainClass := Some("org.example.Job")
+assembly / mainClass := Some("org.example.TableAPIJob")
 assembly / logLevel := Level.Warn
 
 // make run command include the provided dependencies
@@ -39,7 +39,3 @@ Compile / run  := Defaults.runTask(Compile / fullClasspath,
 // stays inside the sbt console when we press "ctrl-c" while a Flink programme executes with "run" or "runMain"
 Compile / run / fork := true
 Global / cancelable := true
-
-// exclude Scala library from assembly
-// assembly / assemblyOption  := (assembly / assemblyOption).value.copy(includeScala = false)
-// assembly / assemblyOption  := (assembly / assemblyOption).value.copy(cacheOutput = false)
