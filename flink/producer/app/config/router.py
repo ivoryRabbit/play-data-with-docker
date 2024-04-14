@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.router import ping, review
+from app.controller import ping, review
 
 router = APIRouter()
 
