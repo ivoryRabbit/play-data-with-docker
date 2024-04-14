@@ -12,8 +12,8 @@ router = APIRouter()
 
 
 class Rating(BaseModel):
-    user_id: int = Field(..., alias="userId")
-    movie_id: int = Field(..., alias="movieId")
+    user_id: int = Field(..., alias="user_id")
+    movie_id: int = Field(..., alias="movie_id")
     rating: float = Field(..., alias="rating")
     timestamp: int = Field(..., alias="timestamp")
 
