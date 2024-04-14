@@ -17,7 +17,6 @@ val flinkVersion = "1.18.1"
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "org.apache.flink" %% "flink-scala" % flinkVersion,
       "org.apache.flink" % "flink-streaming-java" % flinkVersion % "provided",
       "org.apache.flink" % "flink-table-api-java" % flinkVersion,
       "org.apache.flink" % "flink-table-api-java-bridge" % flinkVersion % "provided",

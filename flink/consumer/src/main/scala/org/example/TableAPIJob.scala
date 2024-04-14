@@ -47,8 +47,13 @@ object TableAPIJob {
       .executeSql(
         """
           | INSERT INTO ratings_clean
-          | SELECT user_id, movie_id, rating, FROM_UNIXTIME(`timestamp`) AS created_at
+          | SELECT
+          |   user_id,
+          |   movie_id,
+          |   rating,
+          |   FROM_UNIXTIME(`timestamp`) AS created_at
           | FROM ratings
-          |""".stripMargin)
+          |""".stripMargin
+      )
   }
 }

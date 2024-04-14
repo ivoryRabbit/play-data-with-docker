@@ -8,7 +8,6 @@ from dataset import load_data
 
 if __name__ == "__main__":
     load_data("/tmp/flink/dataset")
-
     rating_df = pd.read_csv("/tmp/flink/dataset/ratings.csv").sort_values("timestamp")
 
     url = "http://localhost:8082/review/rating"
@@ -21,7 +20,6 @@ if __name__ == "__main__":
             rating=float(rating),
             timestamp=int(timestamp),
         )
-        print(payload)
 
         response = requests.post(url=url, data=json.dumps(payload), headers=headers)
         print(response.status_code)
