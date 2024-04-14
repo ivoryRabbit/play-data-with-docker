@@ -16,6 +16,7 @@ services:
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
       KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: ture
     volumes:
       - ./docker/volume/kafka:/bitnami/kafka
     healthcheck:
@@ -113,33 +114,33 @@ services:
   #     retries: 3
   #     start_period: 5s
 
-  # flink-jobmanager:
-  #   container_name: flink-jobmanager
-  #   hostname: flink-jobmanager
-  #   build:
-  #     dockerfile: ./docker/flink/Dockerfile
-  #   image: flink-dev
-  #   ports:
-  #     - "8081:8081"
-  #   command: jobmanager
-  #   environment:
-  #     - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
-  #   volumes:
-  #     - ./docker/volume/flink/jobmanager:/data/flink
+  flink-jobmanager:
+    container_name: flink-jobmanager
+    hostname: flink-jobmanager
+    build:
+      dockerfile: ./docker/flink/Dockerfile
+    image: flink-dev
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    volumes:
+      - ./docker/volume/flink/jobmanager:/data/flink
 
-  # flink-taskmanager:
-  #   container_name: flink-taskmanager
-  #   hostname: flink-taskmanager
-  #   build:
-  #     dockerfile: ./docker/flink/Dockerfile
-  #   image: flink-dev
-  #   command: taskmanager
-  #   environment:
-  #     - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
-  #   volumes:
-  #     - ./docker/volume/flink/taskmanager:/data/flink
+  flink-taskmanager:
+    container_name: flink-taskmanager
+    hostname: flink-taskmanager
+    build:
+      dockerfile: ./docker/flink/Dockerfile
+    image: flink-dev
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    volumes:
+      - ./docker/volume/flink/taskmanager:/data/flink
 
-  producer:
+  kafka-producer:
     container_name: kafka-producer
     build:
       dockerfile: ./docker/producer/Dockerfile
