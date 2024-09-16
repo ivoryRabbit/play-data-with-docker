@@ -1,19 +1,17 @@
-version: "3.7"
 services:
   neo4j:
     image: neo4j:latest
+    container_name: graphdb
     restart: always
     ports:
       - 7474:7474
       - 7687:7687
     volumes:
-      - ./conf:/conf
-      - ./data:/data
-      - ./import:/import
-      - ./logs:/logs
-      - ./plugins:/plugins
+      - ./docker/data:/data
+      - ./docker/logs:/logs
+      - ./docker/plugins:/plugins
     environment: 
-      - NEO4J_dbms_memory_pagecache_size=1G
-      - NEO4J_dbms.memory.heap.initial_size=1G
-      - NEO4J_dbms_memory_heap_max__size=1G
-      # user: neo4j password: neo4j
+      - NEO4J_server_memory_pagecache_size=516M
+      - NEO4J_server_memory_heap_initial__size=516M
+      - NEO4J_server_memory_heap_max__size=516M
+      # - NEO4J_AUTH=neo4j/neo4j
