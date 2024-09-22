@@ -15,3 +15,5 @@ services:
       - NEO4J_server_memory_heap_initial__size=516M
       - NEO4J_server_memory_heap_max__size=516M
       # - NEO4J_AUTH=neo4j/neo4j
+
+      # https://neo4j.com/docs/operations-manual/current/docker/ref-settings/
