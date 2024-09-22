@@ -1,0 +1,118 @@
+services:
+  postgres: # metadata storage
+    container_name: postgres
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/volume/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=FoolishPassword
+      - POSTGRES_USER=druid
+      - POSTGRES_DB=druid
+
+  zookeeper:
+    container_name: zookeeper
+    image: zookeeper:3.9.2
+    ports:
+      - "2181:2181"
+    environment:
+      - ZOO_MY_ID=1
+
+  coordinator: # manages data availability on the cluster
+    image: apache/druid:30.0.1
+    container_name: coordinator
+    volumes:
+      - ./docker/volume/druid_shared:/opt/shared
+      - ./docker/volume/coordinator_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+    ports:
+      - "8081:8081"
+    command:
+      - coordinator
+    env_file:
+      - ./docker/druid.env
+
+  overlord: # controls the assignment of data ingestion workloads.
+    image: apache/druid:30.0.1
+    container_name: overlord
+    volumes:
+      - ./docker/volume/overlord_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+    ports:
+      - "8090:8090"
+    command:
+      - overlord
+    env_file:
+      - ./docker/druid.env
+
+  broker: # handlers queries from external clients
+    image: apache/druid:30.0.1
+    container_name: broker
+    volumes:
+      - ./docker/volume/broker_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "8082:8082"
+    command:
+      - broker
+    env_file:
+      - ./docker/druid.env
+
+  router: # routes requests to Brokers, Coordinators, and Overlords.
+    image: apache/druid:30.0.1
+    container_name: router
+    volumes:
+      - ./docker/volume/router_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "8888:8888"
+    command:
+      - router
+    env_file:
+      - ./docker/druid.env
+
+  historical: # stores queryable data
+    image: apache/druid:30.0.1
+    container_name: historical
+    volumes:
+      - ./dokcer/volume/druid_shared:/opt/shared
+      - ./docker/volume/historical_var:/opt/druid/var
+    depends_on: 
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "8083:8083"
+    command:
+      - historical
+    env_file:
+      - ./docker/druid.env
+
+  middlemanager: # ingest data (using Peons)
+    image: apache/druid:30.0.1
+    container_name: middlemanager
+    volumes:
+      - ./docker/volume/druid_shared:/opt/shared
+      - ./docker/volume/middle_var:/opt/druid/var
+    depends_on: 
+      - zookeeper
+      - postgres
+      - overlord
+    ports:
+      - "8091:8091"
+      - "8100-8105:8100-8105"
+    command:
+      - middleManager
+    env_file:
+      - ./docker/druid.env
