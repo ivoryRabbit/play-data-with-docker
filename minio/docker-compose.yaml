@@ -1,0 +1,36 @@
+services:
+  minio:
+    container_name: minio
+    hostname: minio
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+      MINIO_DOMAIN: minio
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: "mc ready local"
+      interval: 10s
+      retries: 3
+      start_period: 5s
+
+  minio-client:
+    container_name: minio-client
+    hostname: minio-client
+    image: minio/mc
+    entrypoint: >
+      /bin/bash -c "
+      mc config --quiet host add storage http://minio:9000 minio minio123 || true;
+      mc mb --quiet --ignore-existing storage/hive || true;
+      "
+    environment:
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: true
+    depends_on:
+      minio:
+        condition: service_healthy
