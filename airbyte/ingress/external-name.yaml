@@ -1,0 +1,7 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: airbyte-external
+spec:
+  type: ExternalName
+  externalName: host.docker.internal

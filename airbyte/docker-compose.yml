@@ -18,7 +18,6 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-airbyte}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-dev}
       MYSQL_ALLOW_EMPTY_PASSWORD: true
-    restart: always
 
   minio:
     container_name: minio
