@@ -1,7 +1,6 @@
 services:
   postgres:
     container_name: postgres
-    hostname: postgres
     image: postgres:14-alpine
     ports:
       - "5432:5432"
@@ -20,7 +19,6 @@ services:
 
   minio:
     container_name: minio
-    hostname: minio
     image: minio/minio
     ports:
       - "9000:9000"
@@ -31,7 +29,7 @@ services:
       MINIO_DOMAIN: minio
     volumes:
       - ./docker/volume/minio:/data
-    command: server /data --console-address ":9001"
+    command: ["server", "/data", "--console-address", ":9001"]
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 10s
@@ -41,112 +39,121 @@ services:
 
   minio-client:
     container_name: minio-client
-    hostname: minio-client
     image: minio/mc
     entrypoint: >
       /bin/bash -c "
-      mc config --quiet host add storage http://minio:9000 minio minio123 || true;
-      mc mb --quiet --ignore-existing storage/hive || true;
-      mc mb --quiet --ignore-existing storage/iceberg || true;
+        mc config --quiet host add storage http://minio:9000 minio minio123 || true;
+        mc mb --quiet --ignore-existing storage/hive || true;
+        mc mb --quiet --ignore-existing storage/iceberg || true;
       "
     environment:
-      - AWS_ACCESS_KEY_ID=minio
-      - AWS_SECRET_ACCESS_KEY=minio123
-      - AWS_REGION=ap-northeast-2
-      - AWS_DEFAULT_REGION=ap-northeast-2
-      - S3_ENDPOINT=http://minio:9000
-      - S3_PATH_STYLE_ACCESS=true
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_REGION: ap-northeast-2
+      AWS_DEFAULT_REGION: ap-northeast-2
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: true
     depends_on:
       minio:
         condition: service_healthy
+    restart: "no"
 
-  hive-metastore:
-    container_name: hive-metastore
-    hostname: hive-metastore
-    image: starburstdata/hive:3.1.3-e.6
-    ports:
-      - "9083:9083"
-    env_file:
-      - ./docker/hive-metastore/.env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "netstat", "-lpn",  "|", "grep", "9083"]
-      interval: 10s
-      retries: 3
-      start_period: 5s
-    restart: unless-stopped
+  # hive-metastore:
+  #   container_name: hive-metastore
+  #   image: starburstdata/hive:3.1.3-e.6
+  #   ports:
+  #     - "9083:9083"
+  #   env_file:
+  #     - ./docker/hive-metastore/.env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_started
+  #   healthcheck:
+  #     test: ["CMD", "netstat", "-lpn",  "|", "grep", "9083"]
+  #     interval: 10s
+  #     retries: 3
+  #     start_period: 5s
+  #   restart: unless-stopped
 
   trino:
     container_name: trino
     hostname: trino
-    image: trinodb/trino:435
+    image: trinodb/trino:450
     ports:
       - "543:543"
     volumes:
       - ./docker/trino/etc:/etc/trino
-      - ./docker/trino/catalog:/etc/trino/catalog
+      - ./docker/volume/trino:/var/lib/trino/data
     depends_on:
-      hive-metastore:
-        condition: service_healthy
+      # hive-metastore:
+      #   condition: service_healthy
+      nessie:
+        condition: service_started
     restart: unless-stopped
 
+  nessie:
+    container_name: nessie
+    image: ghcr.io/projectnessie/nessie:0.101.3
+    ports:
+      # API port
+      - "19120:19120"
+      # Management port (metrics and health checks)
+      - "9091:9000"
+    depends_on:
+      - mongo
+    environment:
+      - nessie.version.store.type=MONGODB
+      - quarkus.mongodb.database=nessie
+      - quarkus.mongodb.connection-string=mongodb://root:password@mongo:27017
+    restart: unless-stopped
+  
+  mongo:
+    container_name: mongo
+    image: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+
+  dremio:
+    container_name: dremio
+    image: dremio/dremio-oss:latest
+    ports:
+      - "9047:9047"
+      - "31010:31010"
+      - "32010:32010"
+    environment:
+      - DREMIO_JAVA_SERVER_EXTRA_OPTS=-Dpaths.dist=file:///opt/dremio/data/dis
   # nessie:
-  #   # IMPORTANT: when upgrading Nessie images, make sure to update the spark-sql packages as well
+  #   container_name: nessie
   #   image: ghcr.io/projectnessie/nessie:0.101.3
   #   ports:
-  #     # API port
   #     - "19120:19120"
-  #     # Management port (metrics and health checks)
-  #     - "9000:9000"
+  #     # - "9090:9000"
   #   depends_on:
-  #     jaeger:
+  #     postgres:
   #       condition: service_healthy
   #     minio:
   #       condition: service_healthy
-  #     keycloak:
-  #       condition: service_healthy
   #   environment:
-  #     # Version store settings.
-  #     # This example uses Postgres as the version store.
   #     - nessie.version.store.type=JDBC
   #     - nessie.version.store.persist.jdbc.datasource=postgresql
   #     - quarkus.datasource.postgresql.jdbc.url=jdbc:postgresql://postgres:5432/catalog
   #     - quarkus.datasource.postgresql.username=postgres
   #     - quarkus.datasource.postgresql.password=postgres
-  #     # AuthN settings.
-  #     # This examples uses Keycloak for authentication.
-  #     - nessie.server.authentication.enabled=true
-  #     - quarkus.oidc.auth-server-url=http://keycloak:8080/realms/iceberg
-  #     - quarkus.oidc.client-id=client1
-  #     - quarkus.oidc.token.issuer=http://keycloak:8080/realms/iceberg
-  #     # Object store settings.
-  #     # This example uses MinIO as the object store.
+  #     - nessie.server.authentication.enabled=false
   #     - nessie.catalog.default-warehouse=warehouse
-  #     - nessie.catalog.warehouses.warehouse.location=s3://demobucket/
-  #     - nessie.catalog.service.s3.default-options.region=us-east-1
-  #     - nessie.catalog.service.s3.default-options.path-style-access=true
-  #     - nessie.catalog.service.s3.default-options.access-key=urn:nessie-secret:quarkus:nessie.catalog.secrets.access-key
-  #     - nessie.catalog.secrets.access-key.name=minioadmin
-  #     - nessie.catalog.secrets.access-key.secret=minioadmin
-  #     # MinIO endpoint
-  #     - nessie.catalog.service.s3.default-options.endpoint=http://minio:9000/
-  #     # OpenTelemetry settings.
-  #     # This example uses Jaeger as the OpenTelemetry traces collector.
-  #     - quarkus.otel.exporter.otlp.endpoint=http://jaeger:4317
-  #     # Authorization settings.
-  #     # In this example, Nessie is configured with 3 clients and 3 rules:
-  #     # - client1: can access all namespaces
-  #     # - client2: can access all namespaces except 'sales'
-  #     # - client3: can access all namespaces except 'eng'
-  #     - nessie.server.authorization.enabled=true
-  #     - nessie.server.authorization.rules.client1=role=='service-account-client1'
-  #     - nessie.server.authorization.rules.client2=role=='service-account-client2' && !path.startsWith('sales')
-  #     - nessie.server.authorization.rules.client3=role=='service-account-client3' && !path.startsWith('eng')
-  #   healthcheck:
+  #     - nessie.catalog.warehouses.warehouse.location=s3://iceberg/
+  #     - nessie.catalog.service.s3.access-key.name=minio
+  #     - nessie.catalog.service.s3.access-key.secret=minio123
+  #     - nessie.catalog.service.s3.region=ap-northeast-2
+  #     - nessie.catalog.service.s3.path-style-access=true
+  #     - nessie.catalog.service.s3.endpoint=http://minio:9000/
+  #   restart: unless-stopped
+   #   healthcheck:
   #     test: "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /q/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
   #     interval: 5s
   #     timeout: 2s
@@ -200,39 +207,6 @@ services:
   #     timeout: 2s
   #     retries: 15
 
-  # # MinIO
-  # minio:
-  #   image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
-  #   ports:
-  #     # API port
-  #     - "9002:9000"
-  #     # MinIO UI, browse to http://localhost:9092 to view the MinIO Object Browser
-  #     - "9092:9090"
-  #   environment:
-  #     - MINIO_ROOT_USER=minioadmin
-  #     - MINIO_ROOT_PASSWORD=minioadmin
-  #     - MINIO_ADDRESS=:9000
-  #     - MINIO_CONSOLE_ADDRESS=:9090
-  #   command: server /data
-  #   healthcheck:
-  #     test: "bash -c '[[ \"$(exec 3<>/dev/tcp/localhost/9000 && echo -e '\"'\"'GET /minio/health/live HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n'\"'\"' >&3 && cat <&3 | head -n 1)\" == *\"200 OK\"* ]] || exit 1'"
-  #     interval: 5s
-  #     timeout: 2s
-  #     retries: 15
-
-  # # Create MinIO bucket
-  # minio-setup:
-  #   image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
-  #   depends_on:
-  #     minio:
-  #       condition: service_healthy
-  #   entrypoint: /bin/bash
-  #   restart: "no"
-  #   command: [
-  #     "-c",
-  #     "mc alias set myminio http://minio:9000/ minioadmin minioadmin ; mc admin info myminio ; mc mb myminio/demobucket --ignore-existing"
-  #     ]
-
   # # Keycloak with the "iceberg" realm
   # # This example uses Keycloak as the identity provider for Nessie.
   # # The "iceberg" realm configuration is imported from iceberg-realm.json.
@@ -269,24 +243,6 @@ services:
   #   ]
   #   healthcheck:
   #     test: "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
-  #     interval: 5s
-  #     timeout: 2s
-  #     retries: 15
-
-  # postgres:
-  #   image: postgres:17.2
-  #   ports:
-  #     - "5432:5432"
-  #   # set shared memory limit when using docker-compose
-  #   shm_size: 128mb
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #     POSTGRES_DB: catalog
-  #     POSTGRES_INITDB_ARGS: "--encoding UTF8 --data-checksums"
-  #   # /docker-entrypoint-initdb.d
-  #   healthcheck:
-  #     test: "pg_isready -U postgres"
   #     interval: 5s
   #     timeout: 2s
   #     retries: 15
