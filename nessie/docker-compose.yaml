@@ -1,23 +1,6 @@
 services:
-  postgres:
-    container_name: postgres
-    image: postgres:14-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - ./docker/volume/postgres:/var/lib/postgresql/data
-      - ./docker/postgres/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "postgres" ]
-      interval: 10s
-      retries: 3
-      start_period: 5s
-    restart: unless-stopped
-
   minio:
+    profiles: [ "hive", "iceberg" ]
     container_name: minio
     image: minio/minio
     ports:
@@ -38,6 +21,7 @@ services:
     restart: unless-stopped
 
   minio-client:
+    profiles: [ "hive", "iceberg" ]
     container_name: minio-client
     image: minio/mc
     entrypoint: >
@@ -58,26 +42,58 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # hive-metastore:
-  #   container_name: hive-metastore
-  #   image: starburstdata/hive:3.1.3-e.6
-  #   ports:
-  #     - "9083:9083"
-  #   env_file:
-  #     - ./docker/hive-metastore/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     minio:
-  #       condition: service_started
-  #   healthcheck:
-  #     test: ["CMD", "netstat", "-lpn",  "|", "grep", "9083"]
-  #     interval: 10s
-  #     retries: 3
-  #     start_period: 5s
-  #   restart: unless-stopped
+  postgres:
+    profiles: [ "hive" ]
+    container_name: postgres
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./docker/volume/postgres:/var/lib/postgresql/data
+      - ./docker/postgres/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  hive-metastore:
+    profiles: [ "hive" ]
+    container_name: hive-metastore
+    image: starburstdata/hive:3.1.3-e.6
+    ports:
+      - "9083:9083"
+    env_file:
+      - ./docker/hive-metastore/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "netstat", "-lpn",  "|", "grep", "9083"]
+      interval: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  nessie:
+    profiles: [ "hive", "iceberg" ]
+    container_name: nessie
+    image: ghcr.io/projectnessie/nessie:0.101.3
+    ports:
+      - "19120:19120"
+      - "9091:9000"
+    environment:
+      - nessie.version.store.type=IN_MEMORY
+    restart: unless-stopped
 
   trino:
+    profiles: [ "hive", "iceberg" ]
     container_name: trino
     hostname: trino
     image: trinodb/trino:450
@@ -87,38 +103,14 @@ services:
       - ./docker/trino/etc:/etc/trino
       - ./docker/volume/trino:/var/lib/trino/data
     depends_on:
-      # hive-metastore:
-      #   condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
       nessie:
         condition: service_started
     restart: unless-stopped
 
-  nessie:
-    container_name: nessie
-    image: ghcr.io/projectnessie/nessie:0.101.3
-    ports:
-      # API port
-      - "19120:19120"
-      # Management port (metrics and health checks)
-      - "9091:9000"
-    depends_on:
-      - mongo
-    environment:
-      - nessie.version.store.type=MONGODB
-      - quarkus.mongodb.database=nessie
-      - quarkus.mongodb.connection-string=mongodb://root:password@mongo:27017
-    restart: unless-stopped
-  
-  mongo:
-    container_name: mongo
-    image: mongo
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password
-
   dremio:
+    profiles: [ "iceberg" ]
     container_name: dremio
     image: dremio/dremio-oss:latest
     ports:
@@ -126,174 +118,7 @@ services:
       - "31010:31010"
       - "32010:32010"
     environment:
-      - DREMIO_JAVA_SERVER_EXTRA_OPTS=-Dpaths.dist=file:///opt/dremio/data/dis
-  # nessie:
-  #   container_name: nessie
-  #   image: ghcr.io/projectnessie/nessie:0.101.3
-  #   ports:
-  #     - "19120:19120"
-  #     # - "9090:9000"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     minio:
-  #       condition: service_healthy
-  #   environment:
-  #     - nessie.version.store.type=JDBC
-  #     - nessie.version.store.persist.jdbc.datasource=postgresql
-  #     - quarkus.datasource.postgresql.jdbc.url=jdbc:postgresql://postgres:5432/catalog
-  #     - quarkus.datasource.postgresql.username=postgres
-  #     - quarkus.datasource.postgresql.password=postgres
-  #     - nessie.server.authentication.enabled=false
-  #     - nessie.catalog.default-warehouse=warehouse
-  #     - nessie.catalog.warehouses.warehouse.location=s3://iceberg/
-  #     - nessie.catalog.service.s3.access-key.name=minio
-  #     - nessie.catalog.service.s3.access-key.secret=minio123
-  #     - nessie.catalog.service.s3.region=ap-northeast-2
-  #     - nessie.catalog.service.s3.path-style-access=true
-  #     - nessie.catalog.service.s3.endpoint=http://minio:9000/
-  #   restart: unless-stopped
-   #   healthcheck:
-  #     test: "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /q/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
-  #     interval: 5s
-  #     timeout: 2s
-  #     retries: 15
-
-  # # Prometheus
-  # prometheus:
-  #   image: docker.io/prom/prometheus:v3.0.1
-  #   ports:
-  #     # Prometheus UI, browse to http://localhost:9093 to view metrics
-  #     - "9093:9090"
-  #   depends_on:
-  #     nessie:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ../catalog-auth-s3-otel/prometheus/:/etc/prometheus/
-  #   command:
-  #     - --config.file=/etc/prometheus/prometheus.yml
-  #   healthcheck:
-  #       test: "wget -O /dev/null -o /dev/null http://localhost:9090"
-  #       interval: 5s
-  #       timeout: 2s
-  #       retries: 15
-
-  # # Grafana
-  # grafana:
-  #   image: docker.io/grafana/grafana:11.4.0
-  #   depends_on:
-  #     - prometheus
-  #   ports:
-  #     # Grafana UI, browse to http://localhost:3000 to view dashboards
-  #     - "3000:3000"
-  #   volumes:
-  #     - ../catalog-auth-s3-otel/grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
-  #     - ../catalog-auth-s3-otel/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/main.yaml
-  #     - ../../grafana/nessie.json:/var/lib/grafana/dashboards/nessie.json
-
-  # # Jaeger (OpenTelemetry traces collector)
-  # jaeger:
-  #   image: docker.io/jaegertracing/all-in-one:1.64.0
-  #   ports:
-  #     # Jaeger gRPC collector, used by Nessie
-  #     - "4317:4317"
-  #     # Jaeger UI, browse to http://localhost:16686 to view traces
-  #     - "16686:16686"
-  #   environment:
-  #     - COLLECTOR_OTLP_ENABLED=true
-  #   healthcheck:
-  #     test: "echo -e 'GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' | nc localhost 16686 | grep -q '200 OK'"
-  #     interval: 5s
-  #     timeout: 2s
-  #     retries: 15
-
-  # # Keycloak with the "iceberg" realm
-  # # This example uses Keycloak as the identity provider for Nessie.
-  # # The "iceberg" realm configuration is imported from iceberg-realm.json.
-  # # It contains 3 clients: client1, client2 and client3 (secret for all: "s3cr3t"), and 2 custom scopes: "catalog" and "sign".
-  # # Access tokens are valid for 1 hour.
-  # # To access the Keycloak admin console, browse to http://localhost:8080 and log in with the admin/admin credentials.
-  # #
-  # # To request an access token ("bearer token"), use the following command for one of the predefined clients:
-  # #   curl http://127.0.0.1:8080/realms/iceberg/protocol/openid-connect/token --user client1:s3cr3t -d 'grant_type=client_credentials' -d 'scope=catalog'
-  # #   curl http://127.0.0.1:8080/realms/iceberg/protocol/openid-connect/token --user client2:s3cr3t -d 'grant_type=client_credentials' -d 'scope=catalog'
-  # #   curl http://127.0.0.1:8080/realms/iceberg/protocol/openid-connect/token --user client3:s3cr3t -d 'grant_type=client_credentials' -d 'scope=catalog'
-  # keycloak:
-  #   image: quay.io/keycloak/keycloak:26.0.7
-  #   depends_on:
-  #     - postgres
-  #   ports:
-  #     - "8080:8080"
-  #     - "9001:9000"
-  #   environment:
-  #     KC_BOOTSTRAP_ADMIN_USERNAME: admin
-  #     KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-  #     KC_DB: postgres
-  #     KC_DB_URL: jdbc:postgresql://postgres:5432/catalog
-  #     KC_DB_USERNAME: postgres
-  #     KC_DB_PASSWORD: postgres
-  #   volumes:
-  #     - ../authn-keycloak/config/iceberg-realm.json:/opt/keycloak/data/import/iceberg-realm.json
-  #   command: [
-  #     "start-dev",
-  #     "--features=token-exchange",
-  #     "--spi-connections-jpa-quarkus-migration-strategy=update",
-  #     "--import-realm",
-  #     "--health-enabled=true"
-  #   ]
-  #   healthcheck:
-  #     test: "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
-  #     interval: 5s
-  #     timeout: 2s
-  #     retries: 15
-
-  # nessie-cli:
-  #     image: ghcr.io/projectnessie/nessie-cli:0.101.3
-  #     depends_on:
-  #       nessie:
-  #         condition: service_healthy
-  #     stdin_open: true
-  #     tty: true
-  #     command: [
-  #       --uri, "http://nessie:19120/iceberg/main",
-  #       --client-option, "nessie.enable-api-compatibility-check=false",
-  #       # Options for the internal Nessie client
-  #       --client-option, "nessie.authentication.type=OAUTH2",
-  #       --client-option, "nessie.authentication.oauth2.issuer-url=http://keycloak:8080/realms/iceberg",
-  #       --client-option, "nessie.authentication.oauth2.client-id=client1",
-  #       --client-option, "nessie.authentication.oauth2.client-secret=s3cr3t",
-  #       --client-option, "nessie.authentication.oauth2.client-scopes=catalog sign",
-  #       # Options for the internal Iceberg REST client
-  #       --client-option, "uri=http://nessie:19120/iceberg/main",
-  #       --client-option, "oauth2-server-uri=http://keycloak:8080/realms/iceberg/protocol/openid-connect/token",
-  #       --client-option, "credential=client1:s3cr3t",
-  #       --client-option, "scope=catalog sign",
-  #     ]
-
-  # spark-sql:
-  #   image: apache/spark:3.5.4-java17-python3
-  #   depends_on:
-  #     nessie:
-  #       condition: service_healthy
-  #   stdin_open: true
-  #   tty: true
-  #   ports:
-  #     - "4040-4045:4040-4045"
-  #   healthcheck:
-  #     test: "curl localhost:4040"
-  #     interval: 5s
-  #     retries: 15
-  #   command: [
-  #     /opt/spark/bin/spark-sql,
-  #     --packages, "org.projectnessie.nessie-integrations:nessie-spark-extensions-3.5_2.12:0.99.0,org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.0,software.amazon.awssdk:bundle:2.28.17,software.amazon.awssdk:url-connection-client:2.28.17",
-  #     --conf, "spark.sql.extensions=org.projectnessie.spark.extensions.NessieSparkSessionExtensions,org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-  #     --conf, "spark.sql.catalog.nessie=org.apache.iceberg.spark.SparkCatalog",
-  #     --conf, "spark.sql.catalog.nessie.type=rest",
-  #     --conf, "spark.sql.catalog.nessie.uri=http://nessie:19120/iceberg/main",
-  #     --conf, "spark.sql.catalog.nessie.oauth2-server-uri=http://keycloak:8080/realms/iceberg/protocol/openid-connect/token",
-  #     --conf, "spark.sql.catalog.nessie.credential=client1:s3cr3t",
-  #     --conf, "spark.sql.catalog.nessie.scope=catalog sign",
-  #     --conf, "spark.sql.catalogImplementation=in-memory",
-  #   ]
-  #   volumes:
-  #     - ~/.ivy2:/home/spark/.ivy2
+      - DREMIO_JAVA_SERVER_EXTRA_OPTS=-Dpaths.dist=file:///opt/dremio/data/dis -Ddebug.addDefaultUser=true
+    volumes:
+      - ./docker/volume/dremio:/op/dremio/data
+  
