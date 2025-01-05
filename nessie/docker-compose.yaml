@@ -1,6 +1,6 @@
 services:
   minio:
-    profiles: [ "hive", "iceberg" ]
+    # profiles: [ "hive", "iceberg" ]
     container_name: minio
     image: minio/minio
     ports:
@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
   minio-client:
-    profiles: [ "hive", "iceberg" ]
+    # profiles: [ "hive", "iceberg" ]
     container_name: minio-client
     image: minio/mc
     entrypoint: >
@@ -43,7 +43,7 @@ services:
     restart: "no"
 
   postgres:
-    profiles: [ "hive" ]
+    # profiles: [ "hive" ]
     container_name: postgres
     image: postgres:14-alpine
     ports:
@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
 
   hive-metastore:
-    profiles: [ "hive" ]
+    # profiles: [ "hive" ]
     container_name: hive-metastore
     image: starburstdata/hive:3.1.3-e.6
     ports:
@@ -82,7 +82,7 @@ services:
     restart: unless-stopped
 
   nessie:
-    profiles: [ "hive", "iceberg" ]
+    # profiles: [ "hive", "iceberg" ]
     container_name: nessie
     image: ghcr.io/projectnessie/nessie:0.101.3
     ports:
@@ -93,7 +93,7 @@ services:
     restart: unless-stopped
 
   trino:
-    profiles: [ "hive", "iceberg" ]
+    # profiles: [ "hive", "iceberg" ]
     container_name: trino
     hostname: trino
     image: trinodb/trino:450
@@ -110,7 +110,7 @@ services:
     restart: unless-stopped
 
   dremio:
-    profiles: [ "iceberg" ]
+    # profiles: [ "iceberg" ]
     container_name: dremio
     image: dremio/dremio-oss:latest
     ports:
