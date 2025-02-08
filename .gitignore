@@ -1,7 +1,5 @@
+# ide
 .idea
-
-**/volume/*.
-**/volume
 .DS_Store
 
 .metals
@@ -9,3 +7,9 @@
 
 .vscode
 .vscode/*
+
+# volumes
+**/volume/*.
+**/volume
+**/volumes/*.
+**/volumes
